@@ -14,7 +14,11 @@
     "debounce",
     "memo"
   ],
-  "author": "",
+  "author": {
+    "name" : "Woosuk Nam (suk-6)",
+    "email" : "me@suk.kr",
+    "url" : "https://suk.kr"
+  },
   "license": "MIT",
   "peerDependencies": {
     "react": ">=16.8.0"
