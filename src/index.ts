@@ -33,6 +33,7 @@ export function useDebouncedMemo<T>(
   const timeoutRef = useRef<number>();
   const factoryRef = useRef(factory);
   const eagerValueRef = useRef<T>();
+  const counterRef = useRef(0);
 
   // Update factory ref
   factoryRef.current = factory;
@@ -47,7 +48,8 @@ export function useDebouncedMemo<T>(
 
   // Track dependency changes with a counter for triggering effects
   const depsCounter = useMemo(() => {
-    return Math.random(); // Use random to ensure effect triggers on deps change
+    counterRef.current++;
+    return counterRef.current;
   }, deps);
 
   useEffect(() => {
@@ -61,7 +63,9 @@ export function useDebouncedMemo<T>(
         setDebouncedValue(factoryRef.current());
       } else {
         // lazy: false - use the already computed value from ref
-        setDebouncedValue(eagerValueRef.current!);
+        if (eagerValueRef.current !== undefined) {
+          setDebouncedValue(eagerValueRef.current);
+        }
       }
     }, delay);
 
