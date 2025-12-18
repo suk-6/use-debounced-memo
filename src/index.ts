@@ -37,18 +37,16 @@ export function useDebouncedMemo<T>(
   // Update factory ref
   factoryRef.current = factory;
 
-  // In non-lazy mode: compute value immediately with useMemo
-  // In lazy mode: just track that deps changed with a counter
-  const memoizedValue = useMemo(() => {
-    if (lazy) {
-      // In lazy mode, increment counter to signal deps changed
-      depsCounterRef.current++;
-      // Return the counter as a dependency trigger
-      return depsCounterRef.current;
-    } else {
-      // In non-lazy mode, compute the value
-      return factory();
-    }
+  // Track dependency changes
+  // In lazy mode: increment a counter (doesn't compute value)
+  // In non-lazy mode: compute the value immediately
+  const depsCounter = useMemo(() => {
+    depsCounterRef.current++;
+    return depsCounterRef.current;
+  }, deps);
+
+  const eagerValue = useMemo(() => {
+    return lazy ? undefined : factory();
   }, deps);
 
   useEffect(() => {
@@ -61,8 +59,8 @@ export function useDebouncedMemo<T>(
         // lazy: true - execute factory when timeout ends
         setDebouncedValue(factoryRef.current());
       } else {
-        // lazy: false - use the already computed memoized value
-        setDebouncedValue(memoizedValue as T);
+        // lazy: false - use the already computed value
+        setDebouncedValue(eagerValue as T);
       }
     }, delay);
 
@@ -71,7 +69,7 @@ export function useDebouncedMemo<T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [memoizedValue, delay]);
+  }, [depsCounter, delay]);
 
   return debouncedValue;
 }
