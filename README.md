@@ -109,9 +109,51 @@ function Counter() {
 }
 ```
 
+### Example with Lazy Option
+
+```tsx
+import { useState } from 'react';
+import { useDebouncedMemo } from 'use-debounced-memo';
+
+function SearchWithLazyExecution() {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // With lazy: true, the expensive search only runs after user stops typing
+  const searchResults = useDebouncedMemo(
+    () => {
+      console.log('Executing expensive search...'); // Only logs after debounce
+      return performExpensiveSearch(searchTerm);
+    },
+    [searchTerm],
+    { delay: 500, lazy: true } // Factory execution is also debounced
+  );
+
+  // Compare with lazy: false (default behavior)
+  const eagerResults = useDebouncedMemo(
+    () => {
+      console.log('Executing search eagerly...'); // Logs immediately on change
+      return performExpensiveSearch(searchTerm);
+    },
+    [searchTerm],
+    { delay: 500, lazy: false } // Factory runs immediately, state update is debounced
+  );
+
+  return (
+    <div>
+      <input 
+        value={searchTerm} 
+        onChange={(e) => setSearchTerm(e.target.value)} 
+      />
+      <div>Lazy results: {searchResults}</div>
+      <div>Eager results: {eagerResults}</div>
+    </div>
+  );
+}
+```
+
 ## API
 
-### `useDebouncedMemo<T>(factory, deps, delay?)`
+### `useDebouncedMemo<T>(factory, deps, options?)`
 
 #### Parameters
 
@@ -123,9 +165,14 @@ function Counter() {
   - An array of dependencies that trigger recomputation
   - Works the same as the dependency array in `useMemo`
 
-- **`delay`** `number` (optional, default: `300`)
-  - Debounce delay in milliseconds
-  - The computed value will be updated after this delay of inactivity
+- **`options`** `number | { delay: number, lazy?: boolean }` (optional, default: `300`)
+  - Can be either a number (for delay only) or an object with options
+  - **As a number**: Specifies the debounce delay in milliseconds
+  - **As an object**:
+    - `delay`: Debounce delay in milliseconds
+    - `lazy`: (optional, default: `false`) Controls when the factory function is executed
+      - `false`: Factory runs immediately when dependencies change, but the state update is debounced (eager execution)
+      - `true`: Both factory execution and state update are debounced (lazy execution)
 
 #### Returns
 
@@ -136,11 +183,22 @@ function Counter() {
 
 ## How It Works
 
+### Default Behavior (lazy: false)
+
 1. The hook immediately computes an initial value using the `factory` function
-2. When dependencies change, `useMemo` recalculates the value
+2. When dependencies change, `useMemo` immediately recalculates the value
 3. Instead of immediately returning the new value, it starts a debounce timer
 4. If dependencies change again before the timer expires, the timer resets
 5. Once the timer expires, the component updates with the new value
+6. Previous timers are always cleaned up to prevent memory leaks
+
+### Lazy Behavior (lazy: true)
+
+1. The hook immediately computes an initial value using the `factory` function
+2. When dependencies change, a debounce timer starts
+3. If dependencies change again before the timer expires, the timer resets
+4. Once the timer expires, the `factory` function is executed and the component updates with the new value
+5. This can be more efficient when the `factory` function is expensive and you want to avoid running it on every dependency change
 6. Previous timers are always cleaned up to prevent memory leaks
 
 ## License
