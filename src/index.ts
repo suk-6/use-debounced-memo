@@ -32,7 +32,8 @@ export function useDebouncedMemo<T>(
   const [debouncedValue, setDebouncedValue] = useState<T>(() => factory());
   const timeoutRef = useRef<number>();
   const factoryRef = useRef(factory);
-  const eagerValueRef = useRef<T>();
+  const eagerValueRef = useRef<T | undefined>(undefined);
+  const eagerValueComputedRef = useRef(false);
   const counterRef = useRef(0);
 
   // Update factory ref
@@ -43,6 +44,9 @@ export function useDebouncedMemo<T>(
   useMemo(() => {
     if (!lazy) {
       eagerValueRef.current = factory();
+      eagerValueComputedRef.current = true;
+    } else {
+      eagerValueComputedRef.current = false;
     }
   }, deps);
 
@@ -63,8 +67,8 @@ export function useDebouncedMemo<T>(
         setDebouncedValue(factoryRef.current());
       } else {
         // lazy: false - use the already computed value from ref
-        if (eagerValueRef.current !== undefined) {
-          setDebouncedValue(eagerValueRef.current);
+        if (eagerValueComputedRef.current) {
+          setDebouncedValue(eagerValueRef.current as T);
         }
       }
     }, delay);
