@@ -1,21 +1,50 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 /**
+ * Options for debounced memo
+ */
+export interface DebouncedMemoOptions {
+  /** Debounce delay in milliseconds */
+  delay: number;
+  /** 
+   * If false (default), factory runs immediately on deps change, but state update is debounced.
+   * If true, both factory execution and state update are debounced.
+   */
+  lazy?: boolean;
+}
+
+/**
  * A hook that debounces a computed value
  * @param factory - A function that returns the memoized value
  * @param deps - Dependency array for the memo
- * @param delay - Debounce delay in milliseconds
+ * @param options - Debounce delay (number) or options object with delay and lazy flag
  * @returns The debounced memoized value
  */
 export function useDebouncedMemo<T>(
   factory: () => T,
   deps: React.DependencyList,
-  delay: number = 300
+  options: number | DebouncedMemoOptions = 300
 ): T {
+  // Parse options
+  const delay = typeof options === 'number' ? options : options.delay;
+  const lazy = typeof options === 'object' && options.lazy === true;
+
   const [debouncedValue, setDebouncedValue] = useState<T>(() => factory());
   const timeoutRef = useRef<number>();
+  const factoryRef = useRef<() => T>(factory);
 
-  const memoizedValue = useMemo(factory, deps);
+  // Update factory ref
+  factoryRef.current = factory;
+
+  // In non-lazy mode: compute value immediately
+  // In lazy mode: skip computation (will compute in timeout)
+  const eagerValue = useMemo(() => {
+    if (lazy) {
+      return undefined;
+    }
+    return factory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, lazy]);
 
   useEffect(() => {
     if (timeoutRef.current) {
@@ -23,7 +52,14 @@ export function useDebouncedMemo<T>(
     }
 
     timeoutRef.current = setTimeout(() => {
-      setDebouncedValue(memoizedValue);
+      if (lazy) {
+        // lazy: true - execute factory when timeout ends
+        setDebouncedValue(factoryRef.current());
+      } else {
+        // lazy: false - use the already computed eager value
+        // eagerValue is guaranteed to be T here since lazy is false
+        setDebouncedValue(eagerValue!);
+      }
     }, delay);
 
     return () => {
@@ -31,7 +67,8 @@ export function useDebouncedMemo<T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [memoizedValue, delay]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [...deps, delay, lazy]);
 
   return debouncedValue;
 }
