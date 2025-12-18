@@ -29,26 +29,22 @@ export function useDebouncedMemo<T>(
   const delay = typeof options === 'number' ? options : options.delay;
   const lazy = typeof options === 'object' && options.lazy === true;
 
-  // Initialize state based on lazy mode
-  const [debouncedValue, setDebouncedValue] = useState<T>(() => {
-    // In lazy mode, we can return undefined initially, but that changes the type
-    // So we still need to call factory() once for the initial value
-    return factory();
-  });
-  
+  const [debouncedValue, setDebouncedValue] = useState<T>(() => factory());
   const timeoutRef = useRef<number>();
   const factoryRef = useRef(factory);
+  const depsCounterRef = useRef(0);
 
   // Update factory ref
   factoryRef.current = factory;
 
   // In non-lazy mode: compute value immediately with useMemo
-  // In lazy mode: create a dependency trigger without computing
+  // In lazy mode: just track that deps changed with a counter
   const memoizedValue = useMemo(() => {
     if (lazy) {
-      // In lazy mode, return an empty object as a signal
-      // Each deps change creates a new object reference
-      return {} as T;
+      // In lazy mode, increment counter to signal deps changed
+      depsCounterRef.current++;
+      // Return the counter as a dependency trigger
+      return depsCounterRef.current;
     } else {
       // In non-lazy mode, compute the value
       return factory();
@@ -66,7 +62,7 @@ export function useDebouncedMemo<T>(
         setDebouncedValue(factoryRef.current());
       } else {
         // lazy: false - use the already computed memoized value
-        setDebouncedValue(memoizedValue);
+        setDebouncedValue(memoizedValue as T);
       }
     }, delay);
 
@@ -75,7 +71,7 @@ export function useDebouncedMemo<T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [memoizedValue, delay, lazy]);
+  }, [memoizedValue, delay]);
 
   return debouncedValue;
 }
