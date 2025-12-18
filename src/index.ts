@@ -31,7 +31,7 @@ export function useDebouncedMemo<T>(
 
   const [debouncedValue, setDebouncedValue] = useState<T>(() => factory());
   const timeoutRef = useRef<number>();
-  const factoryRef = useRef(factory);
+  const factoryRef = useRef<() => T>(factory);
 
   // Update factory ref
   factoryRef.current = factory;
@@ -39,7 +39,10 @@ export function useDebouncedMemo<T>(
   // In non-lazy mode: compute value immediately
   // In lazy mode: skip computation (will compute in timeout)
   const eagerValue = useMemo(() => {
-    return lazy ? undefined : factory();
+    if (lazy) {
+      return undefined;
+    }
+    return factory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, lazy]);
 
@@ -54,7 +57,8 @@ export function useDebouncedMemo<T>(
         setDebouncedValue(factoryRef.current());
       } else {
         // lazy: false - use the already computed eager value
-        setDebouncedValue(eagerValue as T);
+        // eagerValue is guaranteed to be T here since lazy is false
+        setDebouncedValue(eagerValue!);
       }
     }, delay);
 
