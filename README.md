@@ -28,6 +28,7 @@ yarn add use-debounced-memo
 ### Basic Example
 
 ```tsx
+import { useState } from 'react';
 import { useDebouncedMemo } from 'use-debounced-memo';
 
 function SearchComponent() {
@@ -58,6 +59,7 @@ function SearchComponent() {
 ### Example with Complex Computation
 
 ```tsx
+import { useState } from 'react';
 import { useDebouncedMemo } from 'use-debounced-memo';
 
 function DataVisualization() {
@@ -84,6 +86,7 @@ function DataVisualization() {
 ### Example with Default Delay
 
 ```tsx
+import { useState } from 'react';
 import { useDebouncedMemo } from 'use-debounced-memo';
 
 function Counter() {
