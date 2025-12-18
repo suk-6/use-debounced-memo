@@ -47,7 +47,7 @@ export function useDebouncedMemo<T>(
 
   const eagerValue = useMemo(() => {
     return lazy ? undefined : factory();
-  }, deps);
+  }, [...deps, lazy]);
 
   useEffect(() => {
     if (timeoutRef.current) {
@@ -69,7 +69,7 @@ export function useDebouncedMemo<T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [depsCounter, delay]);
+  }, [depsCounter, delay, lazy]);
 
   return debouncedValue;
 }
