@@ -32,11 +32,23 @@ export function useDebouncedMemo<T>(
   const [debouncedValue, setDebouncedValue] = useState<T>(() => factory());
   const timeoutRef = useRef<number>();
   const factoryRef = useRef(factory);
+  const lazyRef = useRef(lazy);
 
-  // Update factory ref
+  // Update refs
   factoryRef.current = factory;
+  lazyRef.current = lazy;
 
-  const memoizedValue = lazy ? undefined : useMemo(factory, deps);
+  // In non-lazy mode: compute value immediately
+  // In lazy mode: return a unique symbol to signal deps changed
+  const memoizedValue = useMemo(() => {
+    if (lazyRef.current) {
+      // In lazy mode, return a signal to trigger effect
+      return Symbol() as any;
+    } else {
+      // In non-lazy mode, compute the value
+      return factory();
+    }
+  }, deps);
 
   useEffect(() => {
     if (timeoutRef.current) {
@@ -44,12 +56,12 @@ export function useDebouncedMemo<T>(
     }
 
     timeoutRef.current = setTimeout(() => {
-      if (lazy) {
+      if (lazyRef.current) {
         // lazy: true - execute factory when timeout ends
         setDebouncedValue(factoryRef.current());
       } else {
-        // lazy: false - use already computed memoized value
-        setDebouncedValue(memoizedValue as T);
+        // lazy: false - use the already computed memoized value
+        setDebouncedValue(memoizedValue);
       }
     }, delay);
 
@@ -58,7 +70,7 @@ export function useDebouncedMemo<T>(
         clearTimeout(timeoutRef.current);
       }
     };
-  }, lazy ? deps : [memoizedValue, delay]);
+  }, [memoizedValue, delay]);
 
   return debouncedValue;
 }
